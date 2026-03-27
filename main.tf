@@ -96,13 +96,14 @@ resource "aws_network_acl" "service_access" {
   }
 }
 
-# ── Phase 4: Route 53 Inbound Resolver Endpoints ─────────────────────────────
-# Two separate ENIs with dedicated IPs in the Service Access Subnet.
-# Both IPs become the primary and secondary DNS servers in the DHCP Options Set.
-# Using explicit IPs (not dynamic lookup) ensures stable, ordered DNS configuration.
+# ── Phase 4: Route 53 Inbound Resolver Endpoint ───────────────────────────────
+# AWS requires a minimum of 2 IP addresses per resolver endpoint.
+# Both IPs are in the Service Access Subnet (single-AZ EVS deployment).
+# These IPs are referenced explicitly in the DHCP Options Set to ensure
+# stable, ordered DNS configuration (primary = resolver_ip_1).
 
-resource "aws_route53_resolver_endpoint" "evs_dns_1" {
-  name               = "evs-dns-resolver-1"
+resource "aws_route53_resolver_endpoint" "evs_dns" {
+  name               = "evs-dns-resolver"
   direction          = "INBOUND"
   security_group_ids = [aws_security_group.dns_sg.id]
 
@@ -111,20 +112,12 @@ resource "aws_route53_resolver_endpoint" "evs_dns_1" {
     ip        = var.resolver_ip_1
   }
 
-  tags = { Name = "evs-dns-resolver-1" }
-}
-
-resource "aws_route53_resolver_endpoint" "evs_dns_2" {
-  name               = "evs-dns-resolver-2"
-  direction          = "INBOUND"
-  security_group_ids = [aws_security_group.dns_sg.id]
-
   ip_address {
     subnet_id = aws_subnet.service_access.id
     ip        = var.resolver_ip_2
   }
 
-  tags = { Name = "evs-dns-resolver-2" }
+  tags = { Name = "evs-dns-resolver" }
 }
 
 # ── Phase 5: DHCP Options Set ─────────────────────────────────────────────────

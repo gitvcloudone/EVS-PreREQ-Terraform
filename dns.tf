@@ -1,59 +1,73 @@
-# Forward Zone
+# ── Phase 4: Route 53 Private Hosted Zone ────────────────────────────────────
+
 resource "aws_route53_zone" "forward" {
   name = var.domain_name
   vpc {
     vpc_id = aws_vpc.evs_vpc.id
   }
+  tags = { Name = "evs-forward-zone" }
 }
 
-# Reverse Zones
-resource "aws_route53_zone" "mgmt_reverse" {
+# ── Reverse Lookup Zones ──────────────────────────────────────────────────────
+# Host Management VLAN (default 10.0.10.0/24) — ESXi hosts
+resource "aws_route53_zone" "host_mgmt_reverse" {
   name = "10.0.10.in-addr.arpa"
   vpc { vpc_id = aws_vpc.evs_vpc.id }
+  tags = { Name = "evs-host-mgmt-reverse" }
 }
 
-resource "aws_route53_zone" "host_reverse" {
+# Management VM VLAN (default 10.0.11.0/24) — vCenter, SDDC Mgr, NSX, Edges
+resource "aws_route53_zone" "mgmt_vm_reverse" {
   name = "11.0.10.in-addr.arpa"
   vpc { vpc_id = aws_vpc.evs_vpc.id }
+  tags = { Name = "evs-mgmt-vm-reverse" }
 }
 
-# A Records for Components
+# ── VCF Appliance A Records (Management VM VLAN — 10.0.11.x) ─────────────────
+# Covers: cloud-builder, sddc-manager, vcenter, nsx-mgr-01/02/03,
+#         nsx-edge-01/02. All must exist before EVS bring-up.
+
 resource "aws_route53_record" "vcf_a" {
   for_each = var.vcf_components
   zone_id  = aws_route53_zone.forward.zone_id
   name     = "${each.key}.${var.domain_name}"
   type     = "A"
-  ttl      = "300"
+  ttl      = 300
   records  = [each.value]
 }
 
-# PTR Records for Components
+# ── VCF Appliance PTR Records (Management VM VLAN — 11.0.10.in-addr.arpa) ────
+# Extracts the last octet of the IP for the PTR record name.
+# e.g. 10.0.11.12 -> "12" in zone "11.0.10.in-addr.arpa"
+
 resource "aws_route53_record" "vcf_ptr" {
   for_each = var.vcf_components
-  zone_id  = aws_route53_zone.mgmt_reverse.zone_id
-  # Extracts last octet from e.g. 10.0.10.12 -> 12
-  name     = "${element(split(".", each.value), 3)}.10.0.10.in-addr.arpa."
+  zone_id  = aws_route53_zone.mgmt_vm_reverse.zone_id
+  name     = element(split(".", each.value), 3)
   type     = "PTR"
-  ttl      = "300"
+  ttl      = 300
   records  = ["${each.key}.${var.domain_name}."]
 }
 
-# A Records for ESXi
+# ── ESXi Host A Records (Host Management VLAN — 10.0.10.x) ───────────────────
+
 resource "aws_route53_record" "esxi_a" {
   for_each = var.esxi_hosts
   zone_id  = aws_route53_zone.forward.zone_id
   name     = "${each.key}.${var.domain_name}"
   type     = "A"
-  ttl      = "300"
+  ttl      = 300
   records  = [each.value]
 }
 
-# PTR Records for ESXi
+# ── ESXi Host PTR Records (Host Management VLAN — 10.0.10.in-addr.arpa) ──────
+# e.g. 10.0.10.21 -> "21" in zone "10.0.10.in-addr.arpa"
+
 resource "aws_route53_record" "esxi_ptr" {
   for_each = var.esxi_hosts
-  zone_id  = aws_route53_zone.host_reverse.zone_id
-  name     = "${element(split(".", each.value), 3)}.11.0.10.in-addr.arpa."
+  zone_id  = aws_route53_zone.host_mgmt_reverse.zone_id
+  name     = element(split(".", each.value), 3)
   type     = "PTR"
-  ttl      = "300"
+  ttl      = 300
   records  = ["${each.key}.${var.domain_name}."]
 }

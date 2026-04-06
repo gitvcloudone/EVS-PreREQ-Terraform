@@ -93,6 +93,24 @@ variable "esxi_hosts" {
   }
 }
 
+# ── Reverse DNS Zone Names ────────────────────────────────────────────────────
+# These must match the /24 prefix of the IPs in esxi_hosts and vcf_components.
+# If you change the host or management VM subnet, update these values too.
+# Format: third-octet.second-octet.first-octet.in-addr.arpa
+# Example: IPs in 10.0.10.0/24 → "10.0.10.in-addr.arpa"
+
+variable "host_mgmt_reverse_zone" {
+  description = "Reverse DNS zone for the ESXi Host Management VLAN. Must match the /24 of esxi_hosts IPs. Update if you change the host management subnet."
+  type        = string
+  default     = "10.0.10.in-addr.arpa"
+}
+
+variable "mgmt_vm_reverse_zone" {
+  description = "Reverse DNS zone for the VCF Management VM VLAN. Must match the /24 of vcf_components IPs. Update if you change the management VM subnet."
+  type        = string
+  default     = "11.0.10.in-addr.arpa"
+}
+
 # ── NSX Edge BGP Peer IPs ─────────────────────────────────────────────────────
 # These IPs are assigned to NSX Edge uplink interfaces during EVS bring-up.
 # They must be within the NSX Uplink VLAN (default 10.0.16.0/24), not the

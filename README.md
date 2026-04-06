@@ -2,6 +2,21 @@
 
 Terraform automation for Amazon EVS (Elastic VMware Service) prerequisites. Deploys all required AWS infrastructure across Phases 2–7 of the EVS readiness guide so you can run `CreateEnvironment` without manual console steps.
 
+## Prerequisites (Phase 1 — manual)
+
+Before applying this Terraform, complete Phase 1 manually in the AWS console or CLI:
+
+- Obtain a valid **VCF Solution Key** (minimum 256 cores, not already in use)
+- Obtain a valid **vSAN License Key** (minimum 110 TiB capacity, not already in use)
+- Obtain your **Broadcom Site ID** from Broadcom at contract close/renewal
+
+These are not automatable via Terraform and must be in place before `CreateEnvironment`.
+
+> **Phase numbering note**: The phases in this README (2–9) are aligned with the EVS
+> getting-started guide sections, not the numbered phase labels in the AWS documentation
+> (which organizes content differently). Cross-reference by resource type, not phase number,
+> when consulting the AWS docs.
+
 ## What it deploys
 
 | Phase | Resource | File |
@@ -130,6 +145,21 @@ variable "esxi_hosts" {
 }
 ```
 
+### Reverse DNS zone names
+
+These must match the /24 subnet of the IPs in `esxi_hosts` and `vcf_components`. If you change those IP subnets, update these variables too — they are not derived automatically.
+
+```hcl
+# Format: third-octet.second-octet.first-octet.in-addr.arpa
+variable "host_mgmt_reverse_zone" { default = "10.0.10.in-addr.arpa" }  # matches 10.0.10.0/24
+variable "mgmt_vm_reverse_zone"   { default = "11.0.10.in-addr.arpa" }  # matches 10.0.11.0/24
+```
+
+> **PTR collision note**: `vcf_ptr` and `esxi_ptr` records use only the last octet as the
+> record name within each reverse zone. If two entries within the same map share the same
+> last octet (e.g. `10.0.11.10` and `10.0.12.10` both in `vcf_components`), they will
+> collide in the PTR zone. Ensure all IPs within each map have unique last octets.
+
 ### NSX Edge uplink IPs
 IPs assigned to NSX Edge uplink interfaces during EVS bring-up. Must be within the NSX Uplink VLAN (default `10.0.16.x`). These are configured as Route Server BGP peer addresses.
 ```hcl
@@ -173,8 +203,10 @@ After `terraform apply`, `terraform output` prints:
 ## Notes
 
 - **BFD is not supported for EVS.** BGP peers use `peer_liveness_detection = "bgp-keepalive"` — do not change this.
+- **`persist_routes_duration = 2`**: Routes are held for 2 minutes after a BGP session drops. Valid range is 1–5 minutes. Increase this if you need more time for NSX to re-establish sessions after a restart.
 - **Route propagation must target the explicit route table**, not the VPC main route table. The main route table silently drops BGP-propagated routes.
 - **DHCP domain-name-servers must exactly match the resolver endpoint IPs** — resolver_ip_1 and resolver_ip_2 are used in both places intentionally.
+- **IAM EC2 write actions** (`EC2ManageEVSResources`) are not tag-conditioned. EVS tags resources during creation — restricting by `AmazonEVSManaged` tag on write actions would deny EVS before it can apply the tag.
 - The Terraform state contains no sensitive data. All secrets (VCF credentials) are managed by EVS during bring-up via Secrets Manager.
 
 ## Validate your environment

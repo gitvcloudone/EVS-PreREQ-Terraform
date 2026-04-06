@@ -46,7 +46,9 @@ data "aws_iam_policy_document" "evs_deploy" {
     resources = ["*"]
   }
 
-  # EC2 write permissions scoped to EVS-managed resources via tag condition
+  # EC2 write permissions required by EVS during CreateEnvironment.
+  # No tag condition: EVS tags resources during creation, so restricting by
+  # AmazonEVSManaged tag on write actions would deny EVS before it can tag.
   statement {
     sid    = "EC2ManageEVSResources"
     effect = "Allow"
@@ -61,11 +63,6 @@ data "aws_iam_policy_document" "evs_deploy" {
       "ec2:DetachNetworkInterface",
     ]
     resources = ["*"]
-    condition {
-      test     = "StringEquals"
-      variable = "aws:ResourceTag/AmazonEVSManaged"
-      values   = ["true"]
-    }
   }
 
   # Secrets Manager — EVS stores VCF credentials here during bring-up

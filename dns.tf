@@ -9,16 +9,17 @@ resource "aws_route53_zone" "forward" {
 }
 
 # ── Reverse Lookup Zones ──────────────────────────────────────────────────────
+# Zone names are driven by variables so changing IP subnets stays consistent.
 # Host Management VLAN (default 10.0.10.0/24) — ESXi hosts
 resource "aws_route53_zone" "host_mgmt_reverse" {
-  name = "10.0.10.in-addr.arpa"
+  name = var.host_mgmt_reverse_zone
   vpc { vpc_id = aws_vpc.evs_vpc.id }
   tags = { Name = "evs-host-mgmt-reverse" }
 }
 
 # Management VM VLAN (default 10.0.11.0/24) — vCenter, SDDC Mgr, NSX, Edges
 resource "aws_route53_zone" "mgmt_vm_reverse" {
-  name = "11.0.10.in-addr.arpa"
+  name = var.mgmt_vm_reverse_zone
   vpc { vpc_id = aws_vpc.evs_vpc.id }
   tags = { Name = "evs-mgmt-vm-reverse" }
 }

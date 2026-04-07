@@ -1,25 +1,27 @@
 # EVS-PreREQ-Terraform
 
-Terraform automation for Amazon EVS (Elastic VMware Service) prerequisites. Deploys all required AWS infrastructure across Phases 2–7 of the EVS readiness guide so you can run `CreateEnvironment` without manual console steps.
+Terraform automation for Amazon EVS (Elastic VMware Service) prerequisites. Deploys all required AWS infrastructure across Steps 2–7 of the EVS readiness guide so you can run `CreateEnvironment` without manual console steps.
 
-## Prerequisites (Phase 1 — manual)
+## Prerequisites (Step 1 — manual)
 
-Before applying this Terraform, complete Phase 1 manually in the AWS console or CLI:
+Before applying this Terraform, complete Step 1 manually in the AWS console or CLI:
 
-- Obtain a valid **VCF Solution Key** (minimum 256 cores, not already in use)
-- Obtain a valid **vSAN License Key** (minimum 110 TiB capacity, not already in use)
+- Enroll in **AWS Business Support** or higher (environment creation fails without it)
+- Obtain a valid **VCF Solution Key** (minimum 256 cores for i4i.metal/4-host cluster)
+- Obtain a valid **vSAN License Key** (minimum 110 TiB capacity)
 - Obtain your **Broadcom Site ID** from Broadcom at contract close/renewal
+- If on-premises connectivity is required, provision an **AWS Transit Gateway** — VPC peering, Direct Connect Private VIFs, and VGW-based VPNs are not supported with EVS
 
 These are not automatable via Terraform and must be in place before `CreateEnvironment`.
 
-> **Phase numbering note**: The phases in this README (2–9) are aligned with the EVS
-> getting-started guide sections, not the numbered phase labels in the AWS documentation
-> (which organizes content differently). Cross-reference by resource type, not phase number,
+> **Step numbering note**: The steps in this README (2–9) are aligned with the EVS
+> getting-started guide sections, not the numbered labels in the AWS documentation
+> (which organizes content differently). Cross-reference by resource type, not step number,
 > when consulting the AWS docs.
 
 ## What it deploys
 
-| Phase | Resource | File |
+| Step | Resource | File |
 |-------|----------|------|
 | 2 | `AWSServiceRoleForEVS` service-linked role | `main.tf` |
 | 2 | `EVSDeploymentPolicy` IAM policy (minimum permissions for `CreateEnvironment`) | `iam.tf` |
@@ -109,7 +111,7 @@ variable "resolver_ip_2" { default = "10.0.0.11" }  # secondary
 ```
 
 ### BGP ASNs
-`route_server_asn` must differ from `nsx_peer_asn`. Default NSX Tier-0 ASN is 65000.
+`route_server_asn` must differ from `nsx_peer_asn` and must be a private ASN — 16-bit range `64512–65534` or 32-bit range `4200000000–4294967294`. Default NSX Tier-0 ASN is 65000.
 ```hcl
 variable "route_server_asn" { default = 65100 }
 variable "nsx_peer_asn"     { default = 65000 }
@@ -171,7 +173,7 @@ variable "nsx_edge_peer_ips" {
 }
 ```
 
-## On-Demand Capacity Reservation (Phase 9)
+## On-Demand Capacity Reservation (Step 9)
 
 `odcr.tf` contains a commented-out `aws_ec2_capacity_reservation` resource for `i4i.metal`. To enable it:
 
@@ -202,6 +204,9 @@ After `terraform apply`, `terraform output` prints:
 
 ## Notes
 
+- **`AmazonEVSEnvironmentPolicy`** is an AWS-managed IAM policy covering the minimum permissions for `CreateEnvironment`. The custom `EVSDeploymentPolicy` in `iam.tf` is equivalent and scoped to your account — use whichever fits your IAM model.
+- **Transit Gateway is required** for on-premises connectivity. VPC peering, Direct Connect Private VIFs, and VGW-based Site-to-Site VPNs are not supported with Amazon EVS.
+- **Security groups do not apply** to EVS VLAN subnet ENIs. NACLs are the only packet filtering mechanism for EVS traffic.
 - **BFD is not supported for EVS.** BGP peers use `peer_liveness_detection = "bgp-keepalive"` — do not change this.
 - **`persist_routes_duration = 2`**: Routes are held for 2 minutes after a BGP session drops. Valid range is 1–5 minutes. Increase this if you need more time for NSX to re-establish sessions after a restart.
 - **Route propagation must target the explicit route table**, not the VPC main route table. The main route table silently drops BGP-propagated routes.

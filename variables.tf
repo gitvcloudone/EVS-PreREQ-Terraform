@@ -49,7 +49,7 @@ variable "resolver_ip_2" {
 # ── BGP / Route Server ────────────────────────────────────────────────────────
 
 variable "route_server_asn" {
-  description = "BGP ASN for the VPC Route Server. Must be in the private range (64512-65534) and must differ from nsx_peer_asn."
+  description = "BGP ASN for the VPC Route Server. Must be a private ASN — 16-bit range (64512-65534) or 32-bit range (4200000000-4294967294). Must differ from nsx_peer_asn."
   type        = number
   default     = 65100
 }

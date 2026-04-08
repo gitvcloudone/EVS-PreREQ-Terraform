@@ -1,6 +1,6 @@
 # EVS-PreREQ-Terraform
 
-Terraform automation for Amazon EVS (Elastic VMware Service) prerequisites. Deploys all required AWS infrastructure across Steps 2–7 of the EVS readiness guide so you can run `CreateEnvironment` without manual console steps.
+Terraform automation for Amazon EVS (Elastic VMware Service) prerequisites. Deploys all required AWS infrastructure for Steps 2, 4–7 of the EVS readiness guide so you can run `CreateEnvironment` without manual console steps. Step 3 (IP Address Planning) is a planning exercise — no resources are created.
 
 ## Prerequisites (Step 1 — manual)
 
@@ -14,35 +14,30 @@ Before applying this Terraform, complete Step 1 manually in the AWS console or C
 
 These are not automatable via Terraform and must be in place before `CreateEnvironment`.
 
-> **Step numbering note**: The steps in this README (2–9) are aligned with the EVS
-> getting-started guide sections, not the numbered labels in the AWS documentation
-> (which organizes content differently). Cross-reference by resource type, not step number,
-> when consulting the AWS docs.
-
 ## What it deploys
 
 | Step | Resource | File |
 |-------|----------|------|
 | 2 | `AWSServiceRoleForEVS` service-linked role | `main.tf` |
 | 2 | `EVSDeploymentPolicy` IAM policy (minimum permissions for `CreateEnvironment`) | `iam.tf` |
-| 3 | VPC with `enable_dns_hostnames` and `enable_dns_support` | `main.tf` |
-| 4 | Route 53 private hosted zone | `dns.tf` |
-| 4 | Forward (A) and reverse (PTR) records for all VCF components and ESXi hosts | `dns.tf` |
-| 4 | Route 53 inbound resolver endpoint with 2 static IPs | `main.tf` |
-| 4 | DNS security group (UDP/TCP 53 from VPC CIDR) | `main.tf` |
-| 5 | DHCP options set with domain name, resolver IPs, and NTP (`169.254.169.123`) | `main.tf` |
-| 6 | Service access subnet with dedicated route table and explicit association | `main.tf` |
+| 4 | VPC with `enable_dns_hostnames` and `enable_dns_support` | `main.tf` |
+| 4 | Service access subnet with dedicated route table and explicit association | `main.tf` |
+| 5 | Route 53 private hosted zone | `dns.tf` |
+| 5 | Forward (A) and reverse (PTR) records for all VCF components and ESXi hosts | `dns.tf` |
+| 5 | Route 53 inbound resolver endpoint with 2 static IPs | `main.tf` |
+| 5 | DNS security group (UDP/TCP 53 from VPC CIDR) | `main.tf` |
+| 6 | DHCP options set with domain name, resolver IPs, and NTP (`169.254.169.123`) | `main.tf` |
 | 7 | VPC Route Server with `persist_routes = enable` | `peering.tf` |
 | 7 | Two Route Server endpoints in the service access subnet | `peering.tf` |
 | 7 | Two BGP peers (NSX Edge uplink IPs, `bgp-keepalive` liveness) | `peering.tf` |
 | 7 | Route propagation to the explicit route table | `peering.tf` |
 | 7 | Network ACL for the service access subnet | `main.tf` |
-| 9 | On-Demand Capacity Reservation for `i4i.metal` — **commented out** in `odcr.tf` | `odcr.tf` |
+| 8 | On-Demand Capacity Reservation for `i4i.metal` — **commented out** in `odcr.tf` | `odcr.tf` |
 
 ## Requirements
 
 - Terraform >= 1.5
-- AWS provider >= 5.0
+- AWS provider >= 5.84 (required for VPC Route Server resources)
 - AWS credentials with permissions to create VPC, IAM, Route 53, and EC2 resources
 
 ## Quick start
@@ -79,7 +74,7 @@ terraform output
 | `iam.tf` | `EVSDeploymentPolicy` — minimum IAM policy for the user or role calling `CreateEnvironment` |
 | `odcr.tf` | On-Demand Capacity Reservation for `i4i.metal` — all code is commented out. Uncomment when ready. |
 | `outputs.tf` | Prints VPC ID, subnet ID, route table ID, resolver IPs, hosted zone ID, Route Server IDs, and IAM ARNs after apply |
-| `providers.tf` | Terraform >= 1.5, AWS provider >= 5.0, no remote state |
+| `providers.tf` | Terraform >= 1.5, AWS provider >= 5.84, no remote state |
 
 ## Variables
 
@@ -173,7 +168,7 @@ variable "nsx_edge_peer_ips" {
 }
 ```
 
-## On-Demand Capacity Reservation (Step 9)
+## On-Demand Capacity Reservation (Step 8)
 
 `odcr.tf` contains a commented-out `aws_ec2_capacity_reservation` resource for `i4i.metal`. To enable it:
 

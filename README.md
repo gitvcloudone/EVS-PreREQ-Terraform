@@ -31,7 +31,7 @@ These are not automatable via Terraform and must be in place before `CreateEnvir
 | 7 | Two Route Server endpoints in the service access subnet | `peering.tf` |
 | 7 | Two BGP peers (NSX Edge uplink IPs, `bgp-keepalive` liveness) | `peering.tf` |
 | 7 | Route propagation to the explicit route table | `peering.tf` |
-| 7 | Network ACL for the service access subnet | `main.tf` |
+| 4 | Network ACL for the service access subnet (DNS + BGP rules) | `main.tf` |
 | 8 | On-Demand Capacity Reservation for `i4i.metal` — **commented out** in `odcr.tf` | `odcr.tf` |
 
 ## Requirements
@@ -68,7 +68,7 @@ terraform output
 | File | Description |
 |------|-------------|
 | `variables.tf` | All configurable values. **Edit this before applying.** |
-| `main.tf` | VPC, service access subnet, route table, DNS security group, Route 53 resolver endpoint, DHCP options set, EVS service-linked role |
+| `main.tf` | VPC, service access subnet, route table, Network ACL (DNS + BGP), DNS security group, Route 53 resolver endpoint, DHCP options set, EVS service-linked role |
 | `dns.tf` | Route 53 private hosted zone, reverse PTR zones for both VLANs, A and PTR records for all VCF components and ESXi hosts |
 | `peering.tf` | VPC Route Server, VPC association, two Route Server endpoints, two BGP peers, route propagation |
 | `iam.tf` | `EVSDeploymentPolicy` — minimum IAM policy for the user or role calling `CreateEnvironment` |

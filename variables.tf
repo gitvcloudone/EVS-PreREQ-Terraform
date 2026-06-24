@@ -74,6 +74,7 @@ variable "vcf_components" {
     "nsx-mgr-01"    = "10.0.11.12"
     "nsx-mgr-02"    = "10.0.11.13"
     "nsx-mgr-03"    = "10.0.11.14"
+    "nsx-mgr"       = "10.0.11.15"
     "nsx-edge-01"   = "10.0.11.21"
     "nsx-edge-02"   = "10.0.11.22"
   }

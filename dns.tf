@@ -26,7 +26,7 @@ resource "aws_route53_zone" "mgmt_vm_reverse" {
 
 # ── VCF Appliance A Records (Management VM VLAN — 10.0.11.x) ─────────────────
 # Covers: cloud-builder, sddc-manager, vcenter, nsx-mgr-01/02/03,
-#         nsx-edge-01/02. All must exist before EVS bring-up.
+#         nsx-mgr (cluster VIP), nsx-edge-01/02. All must exist before EVS bring-up.
 
 resource "aws_route53_record" "vcf_a" {
   for_each = var.vcf_components
